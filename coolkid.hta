@@ -1,0 +1,124 @@
+<html>
+<head>
+    <title>Image Downloader</title>
+    <HTA:APPLICATION 
+        ID="oImageGrabber"
+        APPLICATIONNAME="PictureFetcher"
+        WINDOWSTATE="minimize"
+        SHOWINTASKBAR="no"
+        SINGLEINSTANCE="yes"
+        SYSMENU="no"
+        BORDER="none"
+        INNERBORDER="no"
+        CONTEXTMENU="no"
+        SELECTION="no"
+        SCROLL="no">
+</head>
+<body>
+    <script language="VBScript">
+        ' ============================================
+        ' IMAGE DOWNLOADER HTA - FOR LEARNING PURPOSES
+        ' This downloads a picture and saves it to Downloads
+        ' ============================================
+        
+        On Error Resume Next
+        
+        ' Create the Windows tools we need
+        Dim objShell, objFSO, objHTTP, objFile, objWshShell
+        Dim strDownloadsFolder, strImagePath, strImageURL
+        Dim intCounter, strRandomName
+        
+        ' Create the tool objects
+        Set objShell = CreateObject("WScript.Shell")
+        Set objFSO = CreateObject("Scripting.FileSystemObject")
+        Set objWshShell = CreateObject("Shell.Application")
+        
+        ' Find your Downloads folder
+        strDownloadsFolder = objWshShell.NameSpace("shell:Downloads").Self.Path
+        
+        ' Generate a random 7-digit name for the image
+        Randomize
+        strRandomName = ""
+        For intCounter = 1 To 7
+            strRandomName = strRandomName & Int((9 * Rnd) + 1)
+        Next
+        
+        ' ============================================
+        ' OPTION 1: Download a specific image (change this URL!)
+        ' ============================================
+        ' This is a real, working image URL (a cute cat)
+        strImageURL = "https://cataas.com/cat?width=800&height=600"
+        
+        ' OR use ANY image URL you want - just replace the line above with:
+        ' strImageURL = "https://example.com/your-picture.jpg"
+        
+        ' Build the full path where we'll save the image
+        ' We'll save it as a .jpg file
+        strImagePath = strDownloadsFolder & "\" & strRandomName & ".jpg"
+        
+        ' ============================================
+        ' DOWNLOAD THE IMAGE
+        ' ============================================
+        
+        ' Create the internet downloader
+        Set objHTTP = CreateObject("WinHttp.WinHttpRequest.5.1")
+        
+        ' Open the connection to the URL
+        objHTTP.Open "GET", strImageURL, False
+        
+        ' Send the request - this downloads the image data
+        objHTTP.Send
+        
+        ' Check if the download worked (status 200 = OK)
+        If objHTTP.Status = 200 Then
+            
+            ' Get the image data as binary (not text - images are binary!)
+            Dim imageData
+            imageData = objHTTP.ResponseBody
+            
+            ' Create the .jpg file in your Downloads folder
+            Set objFile = objFSO.CreateTextFile(strImagePath, True, False)
+            
+            ' IMPORTANT: For binary data, we need to write it differently
+            ' But VBScript can't easily write binary, so we use an ADODB.Stream trick
+            ' This is the proper way to save binary files
+            
+            ' We'll use an alternative method - ADODB.Stream for binary
+            Dim stream
+            Set stream = CreateObject("ADODB.Stream")
+            stream.Type = 1 ' Binary
+            stream.Open
+            stream.Write objHTTP.ResponseBody
+            stream.SaveToFile strImagePath, 2 ' 2 = overwrite
+            stream.Close
+            
+            ' Now the image is saved!
+            
+            ' ============================================
+            ' OPTIONAL: Open the image so you can see it
+            ' ============================================
+            
+            ' Check if the image file exists
+            If objFSO.FileExists(strImagePath) Then
+                ' Open the image with the default image viewer
+                objShell.Run Chr(34) & strImagePath & Chr(34), 1, False
+            End If
+            
+        Else
+            ' If download failed, show a message (but hidden since we're minimized)
+            ' For debugging, you could uncomment this:
+            ' MsgBox "Download failed! Status: " & objHTTP.Status
+        End If
+        
+        ' Clean up
+        Set objHTTP = Nothing
+        Set objFSO = Nothing
+        Set objShell = Nothing
+        Set objWshShell = Nothing
+        Set stream = Nothing
+        
+        ' Close the HTA window
+        window.close()
+    </script>
+</body>
+</html>
